@@ -11,7 +11,6 @@ from crewai_tools import WebsiteSearchTool
 search_tool = DuckDuckGoSearchRun()
 search_tool1 = DuckDuckGoSearchResults()
 website_rag = WebsiteSearchTool()
-from langchain_community.tools import DuckDuckGoSearchRun
 
 from crewai_tools import tool
 
