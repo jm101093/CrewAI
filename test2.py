@@ -23,8 +23,7 @@ def search(search_query: str):
 
 llm_lmstudio = ChatOpenAI(
     openai_api_key="null",
-    openai_api_base="http://localhost:1234/v1",
-    #change to http://nimbostratus.ai:1234/v1 to use our model                
+    openai_api_base="http://localhost:1234/v1",               
     model_name="llama"
 )
 
