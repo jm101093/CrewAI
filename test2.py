@@ -10,7 +10,6 @@ from langchain_community.utilities import TextRequestsWrapper
 from crewai_tools import WebsiteSearchTool
 search_tool = DuckDuckGoSearchRun()
 search_tool1 = DuckDuckGoSearchResults()
-#search_tool1 = DuckDuckGoSearchRun()
 website_rag = WebsiteSearchTool()
 from langchain_community.tools import DuckDuckGoSearchRun
 
