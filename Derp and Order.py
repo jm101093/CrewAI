@@ -5,16 +5,12 @@ from crewai import Agent, Task, Crew, Process, tools
 from langchain_openai import ChatOpenAI
 from langchain_community.llms import Ollama
 from langchain_community.tools import DuckDuckGoSearchRun, DuckDuckGoSearchResults
-#when I gave the LLM access to the sleep tool it just used sleep till the itteration limit was reached. Lazy
 #from langchain_community.tools import SleepTool 
 from langchain_community.utilities import TextRequestsWrapper
 from crewai_tools import WebsiteSearchTool
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_community.tools import BraveSearch
 from langchain_community.chat_models import ChatOllama
-
-
-#Tools section 
 #search_tool1 = DuckDuckGoSearchRun()
 website_rag = WebsiteSearchTool()
 search_tool = DuckDuckGoSearchRun()
@@ -22,6 +18,9 @@ search_tool1 = DuckDuckGoSearchResults()
 ##searchtool2 = BraveSearch()
 
 from crewai_tools import tool
+
+os.environ["OPENAI_API_BASE"] = "http://localhost:1234/v1/"
+os.environ["OPENAI_API_KEY"] = "lm-studio"
 
 @tool('DuckDuckGoSearch')
 def search(search_query):
@@ -45,27 +44,21 @@ def BraveSearch(BraveApi_Key, search_query: str):
     Returns:
     - Search results from BraveSearch.
     """
-    BApi_Key = "Your Key here"
+    BApi_Key = "Your key here"
     tool = BraveSearch(BraveApi_Key = BApi_Key)
     return tool.search(search_query, BApi_Key)
 
-#trying to get embeddings to work.
-os.environ["OPENAI_API_BASE"] = "http://localhost:1234/v1/"
-os.environ["OPENAI_API_KEY"] = "null"
-
-#LLMs defined here
 llm_lmstudio = ChatOpenAI(
     openai_api_key="null",
-    openai_api_base="http://localhost:1234/v1",             
+    openai_api_base="http://localhost:1234/v1",               
     model_name="llama"
 )
 
 llm_ollama = ChatOllama(model="llama3-gradient:latest")
 llm_ollama2 = ChatOllama(model="mistral:latest")
 llm_ollama3 = ChatOllama(model="phi3:latest")
+llm_ollama4 = ChatOllama(model="dolphin-llama3:8b-256k")
 
-
-#Begin crew
 class crew:
     #def __init__(self, userInput):
         #self.userInput = userInput
@@ -101,10 +94,12 @@ class crew:
 
                         The goal is to ensure the creative team has a rigorous, well-researched factual framework from which to craft their dramatic storylines. Identify areas where artistic license may reasonably be taken, but flag any major departures from realism. Continuously update your knowledge bases as laws, forensics, and procedures evolve.
                         Remain objective in your analysis - do not insert your own fictional narration or hypotheticals unless directly requested. Respond with comprehensive, cleanly-formatted informational outputs that ease the research burden on the humans while allowing their creativity to soar within factual boundaries.""",
+            #Your Manager is the Editor and chief.
             verbose=True,
             allow_delegation=False,
             tools=[search, searchR, BraveSearch],
-            llm=llm_ollama,
+            llm=llm_lmstudio,
+            embedder="http://localhost:1234/v1/",  # URL to your local embeddings service
             max_iter=300,
             memory=True
         )
@@ -128,6 +123,7 @@ class crew:
             verbose=True,
             allow_delegation=True,
             llm=llm_lmstudio,
+            embedder="http://localhost:1234/v1/",  # URL to your local embeddings service
             max_iter=3000,
             memory=True
         )
@@ -149,7 +145,8 @@ class crew:
                         Collaborate with the writers' room to elevate each others' work through feedback and revision rounds. Ask for clarification on legally risky scenarios. Ultimately, deliver tight, high-stakes, entertaining scripts that enthrall audiences while portraying the criminal justice system with grit and integrity.""",
             verbose=True,
             allow_delegation=True,
-            llm=llm_ollama,
+            llm=llm_lmstudio,
+            embedder="http://localhost:1234/v1/",  # URL to your local embeddings service
             max_iter=3000,
             memory=True
         )
@@ -189,6 +186,7 @@ class crew:
             verbose=True,
             allow_delegation=False,
             llm=llm_lmstudio,
+            embedder="http://localhost:1234/v1/",  # URL to your local embeddings service
             max_iter=300,
             memory=True
         )
@@ -222,7 +220,7 @@ class crew:
             description=f"""Using the research compiled, craft a detailed act-by-act story outline for a single episode depicting the investigation, evidence review, and courtroom proceedings in the evidence/police misconduct murder case.
                             Your outline should follow this structure:
                             ACT 1)
-                            Depict the murder crime itself and initial discovery of the victim and the circumstances around it.
+                            Depict the murder crime itself and initial discovery of the victim and the circumstances around it. Go into detail of the place the victem and describe the enviroment and the state in which they were found.
 
                             Act 2)
                             Introduce the detectives responding to the scene and the process of them collecting evidence and interviewing any witnesses.
@@ -237,11 +235,16 @@ class crew:
                             The prosecution's efforts to validate evidence if there are claims of mishandling or inconsistencies.
                             
                             Act 4)
+                            Describe the pursuit and the circumstances around the arrest of the main suspect. 
+                            Follow that with the interrigation of the suspect and the back and forth exchange between the 
+                            detectives and the suspect in the interrigation room at the police station. Also consider whether or not the suspect asks for a lawyer.
+
+                            Act 5)
                             A culminating review and analysis to determine if the evidence is legally admissible
                             Dramatic debate weighing the legitimacy of the misconduct accusations
                             The fateful decision on whether to take the controversial evidence to trial
 
-                            Act 5)
+                            Act 6)
                             Courtroom proceedings, opening statements, and the prosecutor's evidence focused case
                             The defense's blistering attacks calling the evidences credibility into question
                             The ultimate verdict and resolution of this specific piece of the larger case
@@ -251,7 +254,6 @@ class crew:
             context=[researchTask],
             expected_output=f"""The goal is a gripping, narratively-rich episodic blueprint that follows a realistic case trajectory, delivering constant surprises while maintaining authenticity. Leave avenues for scriptwriters to elevate with dialog, character, and more."""
         )
-
         DialogTask = Task(
             description=f"""Using the act-by-act narrative blueprint developed for this episode centered on the evidences admissibility battle, you will now transform that outline into a full broadcast script complete with rich dialog, engaging character voices, and compelling scene work.
                     Your script should bring the dramatic written storyline to life through:
@@ -285,7 +287,7 @@ class crew:
             #Your Manager is the Editor and chief send your final answer to him.
             agent=DialogWriter,
             context=[researchTask, Storytask],
-            expected_output=f"""Compelling dialog added to the story following the given format."""
+            expected_output=f"""Compelling dialog added to the story following the given format. With at least 10-20 back and forth exchanges per scene"""
         )
         Finaledit = Task(
             description=f"""You will be receiving the full script draft for this episode focused on the evidences admissibility battle in the murder case from the dialog writer. Your role is to thoroughly review and directly edit the script to ensure:
@@ -330,11 +332,11 @@ class crew:
                         Rich, consistent characterizations
                         Powerful, dramatically-engrossing storytelling.
                         
-                        You MUST make sure the FINAL OUTPUT is a FULL TV show script with ALL dialogue and ALL 5 ACTS and details from the beginning to end to for a SINGLE episode based off of the Law And Order series. The dialog needs to be more than just a single sentence for each interaction between characters.
+                        You MUST make sure the FINAL OUTPUT is a FULL TV show script with ALL dialogue and ALL 6 ACTS and details from the beginning to end to for a SINGLE episode based off of the Law And Order series. The dialog needs to be more than just a single sentence for each interaction between characters.
                         THIS IS THE MOST IMPORTANT TASK!!""",
             agent=Reviewer,
             context=[researchTask, Storytask, DialogTask],
-            expected_output=f"""The FINAL OUTPUT is a FULL TV show script with ALL 5 ACTS!!!! PARTS DETAILS!! and DIALOGUE!! from the beginning to end for a SINGLE episode based off of the Law And Order series. THIS IS THE MOST IMPORTANT TASK!!!!!!!!!!!!!"""
+            expected_output=f"""The FINAL OUTPUT is a FULL TV show script with ALL 6 ACTS!!!! PARTS DETAILS!! and DIALOGUE!! from the beginning to end for a SINGLE episode based off of the Law And Order series. THIS IS THE MOST IMPORTANT TASK!!!!!!!!!!!!!"""
         )
 
         # Instantiate your crew with a sequential process
@@ -352,14 +354,12 @@ class crew:
             embedder={
                 "provider": "openai",
                 "config":{
-                        "model": 'second-state/Nomic-embed-text-v1.5-Embedding-GGUF'
+                        "model": 'second-state/Nomic-embed-text-v1.5-Embedding-GGUF/nomic-embed-text-v1.5-f16.gguf'
                 }
             }
         )
         # Get your crew to work!
         return crew.kickoff()
-
-#start
 
 if __name__ == "__main__":
     print("## Welcome to TVShow Writer")
